@@ -25,7 +25,6 @@ def isIP(text):
 def receiveData(conn):
     while True:
         data = conn.recv(4096).decode()
-        global debug
         if debug:
             print("raw: " + data) #debug line
         return data
