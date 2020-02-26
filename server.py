@@ -1,13 +1,7 @@
-#Look into using socket.recvfrom(4096), as that also provides the senders ip
-#Then you can send back to that ip. Can then possibly use SOCK_DGRAM instead
-#Also opens up for multiple senders.
-#Maybe the same in client?
-#p. 191 in book
-
 import socket, sys
 
 def sendMessage(text, conn):
-    conn.send((text).encode())
+    conn.sendto(text.encode(), clientAddress)
 
 def correctProtocol(text, protocol):
     return text.split(" ")[0] == protocol
@@ -30,10 +24,11 @@ def isIP(text):
 
 def receiveData(conn):
     while True:
-        data = conn.recv(4096).decode()
+        global clientAddress
+        data, clientAddress = conn.recvfrom(4096)
         if debug:
-            print("raw: " + data) #debug line
-        return data
+            print("raw: " + data.decode()) #debug line
+        return data.decode()
 
 def get_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -76,20 +71,18 @@ if len(sys.argv) == 2:
     if sys.argv[1] == "-debug":
         debug = True
 
-serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+clientAddress = ()
+serv = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 serv.bind(('0.0.0.0', 5000))
-serv.listen(5)
 seqnr = 0
 
 while True:
-    conn, addr = serv.accept()
-
-    if connectProtocol(conn):
+    if connectProtocol(serv):
         while 1:
-            data = receiveData(conn)
+            data = receiveData(serv)
             if correctSeqnr(data):
                 print(readMessage(data))
-                sendServerMessage(conn)
+                sendServerMessage(serv)
                 increaseSeqnr()
         conn.close()
         print('Client disconnected')

@@ -23,14 +23,14 @@ def isIP(text):
     return len(text.split(".")) == 4
 
 def sendMessage(text):
-    client.send((text).encode())
+    client.sendto(text.encode(),(serverName, serverPort))
 
 def receiveData(socket):
     while True:
-        data = client.recv(4096).decode()
+        data, serverAddress = socket.recvfrom(4096)
         if debug:
-            print("raw: " + data) #debug line
-        return data
+            print("raw: " + data.decode()) #debug line
+        return data.decode()
 
 def readMessage(text):
     return text.split("=")[1]
@@ -62,8 +62,9 @@ if len(sys.argv) == 2:
     if sys.argv[1] == "-debug":
         debug = True
 
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(('0.0.0.0', 5000))
+serverName = '0.0.0.0'
+serverPort = 5000
+client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 seqnr = -1
 
 if connectionProtocol(client) == False:
