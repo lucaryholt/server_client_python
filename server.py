@@ -1,3 +1,9 @@
+#Look into using socket.recvfrom(4096), as that also provides the senders ip
+#Then you can send back to that ip. Can then possibly use SOCK_DGRAM instead
+#Also opens up for multiple senders.
+#Maybe the same in client?
+#p. 191 in book
+
 import socket, sys
 
 def sendMessage(text, conn):
@@ -38,9 +44,6 @@ def get_ip():
         s.close()
     return IP
 
-def sendMessage(text, conn):
-    conn.send((text).encode())
-
 def readMessage(text):
     return text.split("=")[1]
 
@@ -62,9 +65,6 @@ def correctSeqnr(text):
         return True
     else:
         return False
-
-def readMessage(text):
-    return text.split("=")[1]
 
 #The code starts here
 debug = False

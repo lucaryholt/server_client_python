@@ -64,19 +64,21 @@ if len(sys.argv) == 2:
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(('0.0.0.0', 5000))
-seqnr = -1;
+seqnr = -1
 
 if connectionProtocol(client) == False:
     exit()
 print("The connection is ready!")
 
-message = input()
+message = input('Message: ')
 while message != 'Q':
     sendChatMessage(message)
     data = receiveData(client)
     if correctSeqnr(data):
         print(readMessage(data))
         increaseSeqnr()
-    message = input()
+    else:
+        exit()
+    message = input('Message: ')
 
 client.close()
