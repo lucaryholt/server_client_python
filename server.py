@@ -1,10 +1,11 @@
-#Look into using socket.recvfrom(4096), as that also provides the senders ip
-#Then you can send back to that ip. Can then possibly use SOCK_DGRAM instead
-#Also opens up for multiple senders.
-#Maybe the same in client?
-#p. 191 in book
+#Mangler at serveren sender con-res 0xFE og client svarer med con-res 0xFF
+#F.eks. lave ny metode der hedder interruptProtocol?
 
 import socket, sys
+import multiprocessing
+import time
+import threading
+import os
 
 def sendMessage(text, conn):
     conn.send((text).encode())
@@ -66,6 +67,44 @@ def correctSeqnr(text):
     else:
         return False
 
+def serverProcess(conn):
+    print("starting serverProcess")
+    t = threading.currentThread()
+    while 1:
+        data = receiveData(conn)
+        if correctSeqnr(data):
+            setMessageReceived(1)
+            print(readMessage(data))
+            sendServerMessage(conn)
+            increaseSeqnr()
+    print("stopping serverProcess")
+
+def startToleranceTimer(conn):
+    thread1 = threading.Thread(target = serverProcess, args = (conn,))
+
+    thread1.start()
+
+    while 1:
+        time.sleep(4)
+
+        if thread1.is_alive():
+            if messageReceived == 0:
+                print("tolerance reached...")
+
+                sendMessage("con-res 0xFE", conn)
+
+                os._exit(0)
+            else:
+                print("tolerance not reached...")
+                setMessageReceived(0)
+
+def setMessageReceived(n):
+    global messageReceived
+    messageReceived = n
+
+def getMessageReceived():
+    return messageReceived
+
 #The code starts here
 debug = False
 
@@ -80,20 +119,15 @@ serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 serv.bind(('0.0.0.0', 5000))
 serv.listen(5)
 seqnr = 0
+messageReceived = 0
 
-while True:
-    conn, addr = serv.accept()
+conn, addr = serv.accept()
 
-    if connectProtocol(conn):
-        while 1:
-            data = receiveData(conn)
-            if correctSeqnr(data):
-                print(readMessage(data))
-                sendServerMessage(conn)
-                increaseSeqnr()
-        conn.close()
-        print('Client disconnected')
-    else:
-        conn.close()
-        print("Not correct protocol. Closing connection.")
-        break
+if connectProtocol(conn):
+    startToleranceTimer(conn)
+else:
+    conn.close()
+    print("Not correct protocol. Closing connection.")
+
+conn.close()
+print('Client disconnected')

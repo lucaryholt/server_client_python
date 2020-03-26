@@ -49,6 +49,9 @@ def extractSeqnr(text):
 
 def correctSeqnr(text):
     global seqnr
+    if text == "con-res 0xFE":
+        print("server interruptet connection...")
+        sendMessage("con-res 0xFF")
     if int(extractSeqnr(text)) - seqnr == 1:
         return True
 
