@@ -1,4 +1,4 @@
-import socket, sys
+import socket
 import threading
 import time
 import os
@@ -96,15 +96,24 @@ def setLatestData(data):
     global latestData
     latestData = data
 
+def getConf(conf):
+    f = open("client-opt.conf", "r")
+
+    if f.mode == "r":
+        contents = f.read().split("\n")
+        for x in contents:
+            y = x.split(" : ")
+            if y[0] == conf:
+                return y[1]
+
 #The code starts here
 debug = False
+keepAlive = False
 
-if len(sys.argv) == 2:
-    if sys.argv[1] == "-help":
-        print("Use -debug to see raw incoming messages")
-        exit()
-    if sys.argv[1] == "-debug":
-        debug = True
+if getConf("Debug") == "True":
+    debug = True
+if getConf("KeepAlive") == "True":
+    keepAlive = True
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(('0.0.0.0', 5000))
