@@ -1,8 +1,4 @@
-#Mangler at serveren sender con-res 0xFE og client svarer med con-res 0xFF
-#F.eks. lave ny metode der hedder interruptProtocol?
-
 import socket, sys
-import multiprocessing
 import time
 import threading
 import os
@@ -48,7 +44,7 @@ def receiveData(conn):
         data = conn.recv(4096).decode()
         if debug: print("raw: " + data) #debug line
         if toleranceReached == 1:
-            toleranceProtocol(conn)
+            exit()
         return data
 
 def get_ip():
@@ -107,6 +103,8 @@ def startToleranceTimer(conn):
                 if debug: print("tolerance reached...")
 
                 setToleranceReached(1)
+
+                toleranceProtocol(conn)
             else:
                 if debug: print("tolerance not reached...")
                 setMessageReceived(0)
@@ -151,6 +149,5 @@ except BrokenPipeError:
     print("connection failed... shutting down...")
     os._exit(0)
 
-
-conn.close()
 print('Client disconnected')
+conn.close()
