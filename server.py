@@ -25,15 +25,30 @@ def connectProtocol(conn):
     else:
         return
 
+def toleranceProtocol(conn):
+    sendMessage("con-res 0xFE", conn)
+
+    while 1:
+        data = receiveData(conn)
+        if isToleranceResponse(data):
+            if debug: print("tolerance response approved...")
+            break
+
+    conn.close()
+
 def isIP(text):
     str = text.split(" ")[1]
     return len(str.split(".")) == 4
 
+def isToleranceResponse(text):
+    return text == "con-res 0xFF"
+
 def receiveData(conn):
     while True:
         data = conn.recv(4096).decode()
-        if debug:
-            print("raw: " + data) #debug line
+        if debug: print("raw: " + data) #debug line
+        if toleranceReached == 1:
+            toleranceProtocol(conn)
         return data
 
 def get_ip():
@@ -68,7 +83,7 @@ def correctSeqnr(text):
         return False
 
 def serverProcess(conn):
-    print("starting serverProcess")
+    if debug: print("starting serverProcess")
     t = threading.currentThread()
     while 1:
         data = receiveData(conn)
@@ -77,7 +92,7 @@ def serverProcess(conn):
             print(readMessage(data))
             sendServerMessage(conn)
             increaseSeqnr()
-    print("stopping serverProcess")
+    if debug: print("stopping serverProcess")
 
 def startToleranceTimer(conn):
     thread1 = threading.Thread(target = serverProcess, args = (conn,))
@@ -89,21 +104,20 @@ def startToleranceTimer(conn):
 
         if thread1.is_alive():
             if messageReceived == 0:
-                print("tolerance reached...")
+                if debug: print("tolerance reached...")
 
-                sendMessage("con-res 0xFE", conn)
-
-                os._exit(0)
+                setToleranceReached(1)
             else:
-                print("tolerance not reached...")
+                if debug: print("tolerance not reached...")
                 setMessageReceived(0)
 
 def setMessageReceived(n):
     global messageReceived
     messageReceived = n
 
-def getMessageReceived():
-    return messageReceived
+def setToleranceReached(n):
+    global toleranceReached
+    toleranceReached = n
 
 #The code starts here
 debug = False
@@ -120,14 +134,23 @@ serv.bind(('0.0.0.0', 5000))
 serv.listen(5)
 seqnr = 0
 messageReceived = 0
+toleranceReached = 0
 
 conn, addr = serv.accept()
 
-if connectProtocol(conn):
-    startToleranceTimer(conn)
-else:
-    conn.close()
-    print("Not correct protocol. Closing connection.")
+try:
+    if connectProtocol(conn):
+        startToleranceTimer(conn)
+    else:
+        conn.close()
+        print("Not correct protocol. Closing connection.")
+except ConnectionResetError:
+    print("connection closed... shutting down...")
+    os._exit(0)
+except BrokenPipeError:
+    print("connection failed... shutting down...")
+    os._exit(0)
+
 
 conn.close()
 print('Client disconnected')
