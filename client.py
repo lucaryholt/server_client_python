@@ -1,3 +1,5 @@
+#add keepalive time to conf
+
 import socket
 import threading
 import time
@@ -17,6 +19,16 @@ def toleranceProtocol(conn):
 
     conn.close()
     os._exit(0)
+
+def keepAliveProcess():
+    thread = threading.Thread(target = keepAliveThread, args = ())
+
+    thread.start()
+
+def keepAliveThread():
+    while 1:
+        time.sleep(3)
+        sendMessage("con-h 0x00")
 
 def get_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -70,6 +82,7 @@ def correctSeqnr(text):
 
 def clientProcess(conn):
     if debug: print("starting clientProcess...")
+    if keepAlive: keepAliveProcess()
     initiateReceive(conn)
     message = input('Message: ')
     while message != 'Q':

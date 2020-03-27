@@ -1,3 +1,5 @@
+#add toleranceTime to conf
+
 import socket, sys
 import time
 import threading
@@ -41,13 +43,19 @@ def isIP(text):
 def isToleranceResponse(text):
     return text == "con-res 0xFF"
 
+def isKeepAlive(text):
+    return text == "con-h 0x00"
+
 def receiveData(conn):
     while True:
         data = conn.recv(4096).decode()
         if debug: print("raw: " + data) #debug line
         if toleranceReached == 1:
             exit()
-        return data
+        if isKeepAlive(data):
+            setMessageReceived(1)
+        else:
+            return data
 
 def get_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
