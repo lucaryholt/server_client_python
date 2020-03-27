@@ -1,4 +1,6 @@
 import socket, sys
+import threading
+import time
 import os
 
 def connectionProtocol(conn):
@@ -10,6 +12,8 @@ def connectionProtocol(conn):
 def toleranceProtocol(conn):
     if debug: print("server tolerance reached... closing connection...")
     sendMessage("con-res 0xFF")
+
+    print("server timeout... closing...")
 
     conn.close()
     os._exit(0)
@@ -64,6 +68,34 @@ def correctSeqnr(text):
     if int(extractSeqnr(text)) - seqnr == 1:
         return True
 
+def clientProcess(conn):
+    if debug: print("starting clientProcess...")
+    initiateReceive(conn)
+    message = input('Message: ')
+    while message != 'Q':
+        sendChatMessage(message)
+        time.sleep(0.1)
+        data = latestData
+        if correctSeqnr(data):
+            print(readMessage(data))
+            increaseSeqnr()
+        else:
+            exit()
+        message = input('Message: ')
+    if debug: print("stopping clientProcess...")
+
+def getLatestData(conn):
+    while 1:
+        setLatestData(receiveData(conn))
+
+def initiateReceive(conn):
+    thread1 = threading.Thread(target = getLatestData, args = (conn,))
+    thread1.start()
+
+def setLatestData(data):
+    global latestData
+    latestData = data
+
 #The code starts here
 debug = False
 
@@ -77,20 +109,11 @@ if len(sys.argv) == 2:
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(('0.0.0.0', 5000))
 seqnr = -1
+latestData = ""
 
-if connectionProtocol(client) == False:
-    exit()
-print("The connection is ready!")
-
-message = input('Message: ')
-while message != 'Q':
-    sendChatMessage(message)
-    data = receiveData(client)
-    if correctSeqnr(data):
-        print(readMessage(data))
-        increaseSeqnr()
-    else:
-        exit()
-    message = input('Message: ')
+if connectionProtocol(client):
+    print("The connection is ready!")
+    clientProcess(client)
 
 client.close()
+exit()
