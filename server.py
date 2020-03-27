@@ -24,6 +24,8 @@ def connectProtocol(conn):
 def toleranceProtocol(conn):
     sendMessage("con-res 0xFE", conn)
 
+    print("no message received in " + timeoutTolerance +  " seconds...")
+
     while 1:
         data = receiveData(conn)
         if isToleranceResponse(data):
@@ -96,7 +98,7 @@ def startToleranceTimer(conn):
     thread1.start()
 
     while 1:
-        time.sleep(4)
+        time.sleep(timeoutTolerance)
 
         if thread1.is_alive():
             if messageReceived == 0:
@@ -120,19 +122,20 @@ def setToleranceReached(n):
 #The code starts here
 debug = False
 
+serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+serv.bind(('0.0.0.0', 5000))
+serv.listen(5)
+seqnr = 0
+timeoutTolerance = 4
+messageReceived = 0
+toleranceReached = 0
+
 if len(sys.argv) == 2:
     if sys.argv[1] == "-help":
         print("Use -debug to see raw incoming messages")
         exit()
     if sys.argv[1] == "-debug":
         debug = True
-
-serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-serv.bind(('0.0.0.0', 5000))
-serv.listen(5)
-seqnr = 0
-messageReceived = 0
-toleranceReached = 0
 
 conn, addr = serv.accept()
 
