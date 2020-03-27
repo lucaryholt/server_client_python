@@ -1,3 +1,5 @@
+#add toleranceTime to conf
+
 import socket, sys
 import time
 import threading
@@ -24,6 +26,8 @@ def connectProtocol(conn):
 def toleranceProtocol(conn):
     sendMessage("con-res 0xFE", conn)
 
+    print("no message received in " + str(timeoutTolerance) +  " seconds...")
+
     while 1:
         data = receiveData(conn)
         if isToleranceResponse(data):
@@ -39,13 +43,19 @@ def isIP(text):
 def isToleranceResponse(text):
     return text == "con-res 0xFF"
 
+def isKeepAlive(text):
+    return text == "con-h 0x00"
+
 def receiveData(conn):
     while True:
         data = conn.recv(4096).decode()
         if debug: print("raw: " + data) #debug line
         if toleranceReached == 1:
             exit()
-        return data
+        if isKeepAlive(data):
+            setMessageReceived(1)
+        else:
+            return data
 
 def get_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -96,7 +106,7 @@ def startToleranceTimer(conn):
     thread1.start()
 
     while 1:
-        time.sleep(4)
+        time.sleep(timeoutTolerance)
 
         if thread1.is_alive():
             if messageReceived == 0:
@@ -117,22 +127,34 @@ def setToleranceReached(n):
     global toleranceReached
     toleranceReached = n
 
+def getConf(conf):
+    f = open("client-opt.conf", "r")
+
+    if f.mode == "r":
+        contents = f.read().split("\n")
+        for x in contents:
+            y = x.split(" : ")
+            if y[0] == conf:
+                return y[1]
+
 #The code starts here
 debug = False
+timeoutTolerance = 4
+messageReceived = 0
+toleranceReached = 0
+seqnr = 0
 
-if len(sys.argv) == 2:
-    if sys.argv[1] == "-help":
-        print("Use -debug to see raw incoming messages")
-        exit()
-    if sys.argv[1] == "-debug":
-        debug = True
+confDebug = getConf("Debug")
+confTimeoutTolerance = int(getConf("TimeoutTolerance"))
+
+if getConf("Debug") == "True":
+    debug = True
+if  confTimeoutTolerance != 4:
+    timeoutTolerance = confTimeoutTolerance
 
 serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 serv.bind(('0.0.0.0', 5000))
 serv.listen(5)
-seqnr = 0
-messageReceived = 0
-toleranceReached = 0
 
 conn, addr = serv.accept()
 

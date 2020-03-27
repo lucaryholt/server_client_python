@@ -1,4 +1,6 @@
-import socket, sys
+#add keepalive time to conf
+
+import socket
 import threading
 import time
 import os
@@ -17,6 +19,16 @@ def toleranceProtocol(conn):
 
     conn.close()
     os._exit(0)
+
+def keepAliveProcess():
+    thread = threading.Thread(target = keepAliveThread, args = ())
+
+    thread.start()
+
+def keepAliveThread():
+    while 1:
+        time.sleep(keepAliveTime)
+        sendMessage("con-h 0x00")
 
 def get_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -70,6 +82,7 @@ def correctSeqnr(text):
 
 def clientProcess(conn):
     if debug: print("starting clientProcess...")
+    if keepAlive: keepAliveProcess()
     initiateReceive(conn)
     message = input('Message: ')
     while message != 'Q':
@@ -96,20 +109,36 @@ def setLatestData(data):
     global latestData
     latestData = data
 
+def getConf(conf):
+    f = open("client-opt.conf", "r")
+
+    if f.mode == "r":
+        contents = f.read().split("\n")
+        for x in contents:
+            y = x.split(" : ")
+            if y[0] == conf:
+                return y[1]
+
 #The code starts here
 debug = False
+keepAlive = False
+keepAliveTime = 3
+seqnr = -1
+latestData = ""
 
-if len(sys.argv) == 2:
-    if sys.argv[1] == "-help":
-        print("Use -debug to see raw incoming messages")
-        exit()
-    if sys.argv[1] == "-debug":
-        debug = True
+confDebug = getConf("Debug")
+confKeepAlive = getConf("KeepAlive")
+confKeepAliveTime = int(getConf("KeepAliveTime"))
+
+if  confDebug == "True":
+    debug = True
+if  confKeepAlive == "True":
+    keepAlive = True
+if  confKeepAliveTime != 3:
+    keepAliveTime = confKeepAliveTime
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(('0.0.0.0', 5000))
-seqnr = -1
-latestData = ""
 
 if connectionProtocol(client):
     print("The connection is ready!")
