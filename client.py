@@ -3,6 +3,7 @@ import threading
 import time
 import os
 import conPrint
+import PySimpleGUI as sg
 
 class latestDataHandler:
     def getLatestData(conn):
@@ -30,12 +31,14 @@ class config:
         global keepAliveTime
         global portNumber
         global ipAddress
+        global gui
 
         confDebug = config.getConf("Debug")
         confKeepAlive = config.getConf("KeepAlive")
         confKeepAliveTime = float(config.getConf("KeepAliveTime"))
         confPortNumber = int(config.getConf("PortNumber"))
         confIpAddress = config.getConf("IPAddress")
+        confGUI = config.getConf("GUI")
 
         if  confDebug == "True":
             debug = True
@@ -47,6 +50,8 @@ class config:
             portNumber = confPortNumber
         if  confIpAddress != "0.0.0.0":
             ipAddress = confIpAddress
+        if  confGUI == "True":
+            gui = True
 
 class protocolHandler:
     def connectionProtocol(conn):
@@ -150,9 +155,47 @@ def clientProcess(conn):
         message = input()
     if debug: conPrint.debug("stopping clientProcess...")
 
+def guiStart(conn):
+    sg.theme("DarkAmber")
+
+    layout =[
+                [sg.Txt('', size=(20,1), key='output')],
+                [sg.Text('Message:'), sg.InputText()],
+                [sg.Button('Ok'), sg.Button('Cancel')]
+            ]
+
+    window = sg.Window("Chat", layout)
+
+
+    if debug: conPrint.debug("starting clientProcess...")
+    if keepAlive: keepAliveHandler.keepAliveProcess()
+    socketHandler.initiateReceive(conn)
+
+    while True:
+        event, values = window.read()
+        if event in (None, 'Cancel'):
+            break
+
+        message = values[0]
+        if message == "Q":
+            break
+        textHandler.sendChatMessage(message)
+        time.sleep(0.1)
+        data = latestData
+        if seqNrHandler.correctSeqnr(data):
+            message = textHandler.readMessage(data)
+            window['output'].update(data)
+            print(message)
+            seqNrHandler.increaseSeqnr()
+        else:
+            exit()
+
+    window.close()
+
 #Code starts here
 debug = False
 keepAlive = False
+gui = False
 keepAliveTime = 3
 portNumber = 5000
 ipAddress = "0.0.0.0"
@@ -165,8 +208,11 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect((ipAddress, portNumber))
 
 if protocolHandler.connectionProtocol(client):
-    conPrint.success("The connection is ready!")
-    clientProcess(client)
+    if gui:
+        guiStart(client)
+    else:
+        conPrint.success("The connection is ready!")
+        clientProcess(client)
 
 client.close()
 exit()
