@@ -1,10 +1,18 @@
 import socket, sys
+import os
 
 def connectionProtocol(conn):
     sendMessage("com-0 " + get_ip())
     if correctAcceptProtocol(receiveData(conn)):
         sendMessage("com-0 accept")
         return True
+
+def toleranceProtocol(conn):
+    if debug: print("server tolerance reached... closing connection...")
+    sendMessage("con-res 0xFF")
+
+    conn.close()
+    os._exit(0)
 
 def get_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -22,14 +30,18 @@ def correctAcceptProtocol(text):
 def isIP(text):
     return len(text.split(".")) == 4
 
+def isToleranceMessage(text):
+    return text == "con-res 0xFE"
+
 def sendMessage(text):
     client.send((text).encode())
 
 def receiveData(socket):
     while True:
         data = client.recv(4096).decode()
-        if debug:
-            print("raw: " + data) #debug line
+        if debug: print("raw: " + data) #debug line
+        if isToleranceMessage(data):
+            toleranceProtocol(socket)
         return data
 
 def readMessage(text):
