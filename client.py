@@ -128,7 +128,7 @@ latestData = ""
 
 confDebug = getConf("Debug")
 confKeepAlive = getConf("KeepAlive")
-confKeepAliveTime = int(getConf("KeepAliveTime"))
+confKeepAliveTime = float(getConf("KeepAliveTime"))
 
 if  confDebug == "True":
     debug = True

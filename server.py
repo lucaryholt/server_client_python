@@ -49,6 +49,7 @@ def isKeepAlive(text):
 def receiveData(conn):
     while True:
         data = conn.recv(4096).decode()
+        incrementPackagePerSecond()
         if debug: print("raw: " + data) #debug line
         if toleranceReached == 1:
             exit()
@@ -105,6 +106,8 @@ def startToleranceTimer(conn):
 
     thread1.start()
 
+    packPerSecProcess(conn)
+
     while 1:
         time.sleep(timeoutTolerance)
 
@@ -119,6 +122,22 @@ def startToleranceTimer(conn):
                 if debug: print("tolerance not reached...")
                 setMessageReceived(0)
 
+def packPerSecThread(conn):
+    while 1:
+        time.sleep(1)
+        if packagesPerSecondReceived > maxPackagesPerSecond:
+            print("too many packages received... shutting down...")
+            os._exit(0)
+        resetPackPerSec()
+
+
+def packPerSecProcess(conn):
+    print("im here!")
+
+    thread0 = threading.Thread(target = packPerSecThread, args = (conn,))
+
+    thread0.start()
+
 def setMessageReceived(n):
     global messageReceived
     messageReceived = n
@@ -127,8 +146,16 @@ def setToleranceReached(n):
     global toleranceReached
     toleranceReached = n
 
+def incrementPackagePerSecond():
+    global packagesPerSecondReceived
+    packagesPerSecondReceived = packagesPerSecondReceived + 1
+
+def resetPackPerSec():
+    global packagesPerSecondReceived
+    packagesPerSecondReceived = 0
+
 def getConf(conf):
-    f = open("client-opt.conf", "r")
+    f = open("server-opt.conf", "r")
 
     if f.mode == "r":
         contents = f.read().split("\n")
@@ -140,17 +167,23 @@ def getConf(conf):
 #The code starts here
 debug = False
 timeoutTolerance = 4
+maxPackagesPerSecond = 25
 messageReceived = 0
 toleranceReached = 0
 seqnr = 0
 
+packagesPerSecondReceived = 0
+
 confDebug = getConf("Debug")
 confTimeoutTolerance = int(getConf("TimeoutTolerance"))
+confMaxPackagesPerSecond = int(getConf("MaxPackagesPerSecond"))
 
-if getConf("Debug") == "True":
+if confDebug == "True":
     debug = True
-if  confTimeoutTolerance != 4:
+if confTimeoutTolerance != 4:
     timeoutTolerance = confTimeoutTolerance
+if confMaxPackagesPerSecond != 25:
+    maxPackagesPerSecond = confMaxPackagesPerSecond
 
 serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 serv.bind(('0.0.0.0', 5000))
