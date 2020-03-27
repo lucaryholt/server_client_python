@@ -26,7 +26,7 @@ def connectProtocol(conn):
 def toleranceProtocol(conn):
     sendMessage("con-res 0xFE", conn)
 
-    print("no message received in " + timeoutTolerance +  " seconds...")
+    print("no message received in " + str(timeoutTolerance) +  " seconds...")
 
     while 1:
         data = receiveData(conn)
@@ -139,17 +139,22 @@ def getConf(conf):
 
 #The code starts here
 debug = False
+timeoutTolerance = 4
+messageReceived = 0
+toleranceReached = 0
+seqnr = 0
+
+confDebug = getConf("Debug")
+confTimeoutTolerance = int(getConf("TimeoutTolerance"))
 
 if getConf("Debug") == "True":
     debug = True
+if  confTimeoutTolerance != 4:
+    timeoutTolerance = confTimeoutTolerance
 
 serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 serv.bind(('0.0.0.0', 5000))
 serv.listen(5)
-seqnr = 0
-timeoutTolerance = 4
-messageReceived = 0
-toleranceReached = 0
 
 conn, addr = serv.accept()
 

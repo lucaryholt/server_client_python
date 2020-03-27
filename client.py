@@ -27,7 +27,7 @@ def keepAliveProcess():
 
 def keepAliveThread():
     while 1:
-        time.sleep(3)
+        time.sleep(keepAliveTime)
         sendMessage("con-h 0x00")
 
 def get_ip():
@@ -122,16 +122,23 @@ def getConf(conf):
 #The code starts here
 debug = False
 keepAlive = False
+keepAliveTime = 3
+seqnr = -1
+latestData = ""
 
-if getConf("Debug") == "True":
+confDebug = getConf("Debug")
+confKeepAlive = getConf("KeepAlive")
+confKeepAliveTime = int(getConf("KeepAliveTime"))
+
+if  confDebug == "True":
     debug = True
-if getConf("KeepAlive") == "True":
+if  confKeepAlive == "True":
     keepAlive = True
+if  confKeepAliveTime != 3:
+    keepAliveTime = confKeepAliveTime
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(('0.0.0.0', 5000))
-seqnr = -1
-latestData = ""
 
 if connectionProtocol(client):
     print("The connection is ready!")
