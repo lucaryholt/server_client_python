@@ -9,7 +9,6 @@ Made as a mandatory assignment in Tech.
  - External config files
  - Option for maximum packages received per second
  - Debug mode
- 
+
 
 ### Notes for the code:
-

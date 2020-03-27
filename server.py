@@ -1,41 +1,15 @@
 #consider using latest data format from client
+#move config to external file. make generic methods eg. one for boolean,
+#one for int, one for float and so on
+#Maybe look into constructor and method to read all from file, instead of
+#reading file for each value
 
 import socket, sys
 import time
 import threading
 import os
 import conPrint
-
-class config:
-    def getConf(conf):
-        f = open("server-opt.conf", "r")
-
-        if f.mode == "r":
-            contents = f.read().split("\n")
-            for x in contents:
-                y = x.split(" : ")
-                if y[0] == conf:
-                    return y[1]
-
-    def readConfig():
-        global debug
-        global timeoutTolerance
-        global maxPackagesPerSecond
-        global portNumber
-
-        confDebug = config.getConf("Debug")
-        confTimeoutTolerance = int(config.getConf("TimeoutTolerance"))
-        confMaxPackagesPerSecond = int(config.getConf("MaxPackagesPerSecond"))
-        confPortNumber = int(config.getConf("PortNumber"))
-
-        if confDebug == "True":
-            debug = True
-        if confTimeoutTolerance != 4:
-            timeoutTolerance = confTimeoutTolerance
-        if confMaxPackagesPerSecond != 25:
-            maxPackagesPerSecond = confMaxPackagesPerSecond
-        if confPortNumber != 5000:
-            portNumber = confPortNumber
+import configReader
 
 class protocolHandler:
     def connectProtocol(conn):
@@ -200,17 +174,17 @@ def serverProcess(conn):
 
 
 #The code starts here
+fileName = "server-opt.conf"
+debug = configReader.readBoolean(fileName, "Debug")
+timeoutTolerance = configReader.readInt(fileName, "TimeoutTolerance")
+maxPackagesPerSecond = configReader.readInt(fileName, "MaxPackagesPerSecond")
+portNumber = configReader.readInt(fileName, "PortNumber")
+
 state = 1
-debug = False
-timeoutTolerance = 4
-maxPackagesPerSecond = 25
 messageReceived = 0
 toleranceReached = 0
-portNumber = 5000
 seqnr = 0
 packagesPerSecondReceived = 0
-
-config.readConfig()
 
 serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 serv.bind(('0.0.0.0', portNumber))

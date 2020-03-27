@@ -3,6 +3,7 @@ import threading
 import time
 import os
 import conPrint
+import configReader
 
 class latestDataHandler:
     def getLatestData(conn):
@@ -12,41 +13,6 @@ class latestDataHandler:
     def setLatestData(data):
         global latestData
         latestData = data
-
-class config:
-    def getConf(conf):
-        f = open("client-opt.conf", "r")
-
-        if f.mode == "r":
-            contents = f.read().split("\n")
-            for x in contents:
-                y = x.split(" : ")
-                if y[0] == conf:
-                    return y[1]
-
-    def readConfig():
-        global debug
-        global keepAlive
-        global keepAliveTime
-        global portNumber
-        global ipAddress
-
-        confDebug = config.getConf("Debug")
-        confKeepAlive = config.getConf("KeepAlive")
-        confKeepAliveTime = float(config.getConf("KeepAliveTime"))
-        confPortNumber = int(config.getConf("PortNumber"))
-        confIpAddress = config.getConf("IPAddress")
-
-        if  confDebug == "True":
-            debug = True
-        if  confKeepAlive == "True":
-            keepAlive = True
-        if  confKeepAliveTime != 3:
-            keepAliveTime = confKeepAliveTime
-        if  confPortNumber != 5000:
-            portNumber = confPortNumber
-        if  confIpAddress != "0.0.0.0":
-            ipAddress = confIpAddress
 
 class protocolHandler:
     def connectionProtocol(conn):
@@ -151,11 +117,13 @@ def clientProcess(conn):
     if debug: conPrint.debug("stopping clientProcess...")
 
 #Code starts here
-debug = False
-keepAlive = False
-keepAliveTime = 3
-portNumber = 5000
-ipAddress = "0.0.0.0"
+fileName = "client-opt.conf"
+debug = configReader.readBoolean(fileName, "Debug")
+keepAlive = configReader.readBoolean(fileName, "KeepAlive")
+keepAliveTime = configReader.readFloat(fileName, "KeepAliveTime")
+portNumber = configReader.readInt(fileName, "PortNumber")
+ipAddress = configReader.readString(fileName, "IPAddress")
+
 seqnr = -1
 latestData = ""
 
