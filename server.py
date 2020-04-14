@@ -1,15 +1,28 @@
-#consider using latest data format from client
-#move config to external file. make generic methods eg. one for boolean,
-#one for int, one for float and so on
 #Maybe look into constructor and method to read all from file, instead of
 #reading file for each value
+#https://www.geeksforgeeks.org/constructors-in-python/
+#^also for socket connection class
 
-import socket, sys
-import time
-import threading
-import os
-import conPrint
-import configReader
+#log fil, med korrekte handskakes
+#hvis klienten prøver at skippe første step i handshaket, hvordan skal serveren svare? skal det logges?
+# - prøv at hakke dig selv, prøv at bypass protocol regler
+#tilføj dato og tidspunkt i loggen, så man kan se hvornår handskakes er lavet
+
+import socket, sys, time, threading, os
+from datetime import datetime
+import conPrint, configReader
+
+class logPrinter:
+    def printToLog(text):
+        logFileName = "serverlog.txt"
+        file = open(logFileName, "a")
+        file.write(logPrinter.getDateAndTime() + ": " + text + "\n")
+        file.close()
+
+    def getDateAndTime():
+        now = datetime.now()
+        dateTimeString = now.strftime("%d/%m/%Y %H:%M:%S")
+        return dateTimeString
 
 class protocolHandler:
     def connectProtocol(conn):
@@ -24,18 +37,21 @@ class protocolHandler:
         else:
             return
 
-    def toleranceProtocol(conn):
+    def terminationProtocol(conn):
+        if debug: conPrint.debug("requesting termination...")
         socketHandler.sendMessage("con-res 0xFE", conn)
 
-        conPrint.error("no message received in " + str(timeoutTolerance) +  " seconds...")
+        time.sleep(2)
 
-        while 1:
-            data = socketHandler.receiveData(conn)
-            if textHandler.isToleranceResponse(data):
-                if debug: conPrint.debug("tolerance response approved...")
-                break
+        setState(0)
 
-        conn.close()
+    def recvTerminationProtocol(conn):
+        if debug: conPrint.debug("client requested termination... closing connection...")
+        socketHandler.sendMessage("con-res 0xFF", conn)
+
+        print("closing connection...")
+
+        setState(0)
 
 
 class seqNrHandler:
@@ -64,8 +80,11 @@ class textHandler:
         str = text.split(" ")[1]
         return len(str.split(".")) == 4
 
-    def isToleranceResponse(text):
+    def isTerminationResponse(text):
         return text == "con-res 0xFF"
+
+    def isTerminationRequest(text):
+        return text == "con-res 0xFE"
 
     def isKeepAlive(text):
         return text == "con-h 0x00"
@@ -81,12 +100,17 @@ class textHandler:
 class socketHandler:
     def sendMessage(text, conn):
         if debug: conPrint.debugSend("send: \t\t" + text)
+        logPrinter.printToLog("sent: " + text)
         conn.send((text).encode())
 
     def receiveData(conn):
         while True:
             data = conn.recv(4096).decode()
+            logPrinter.printToLog("received: " + data)
+            setLatestData(data)
             packPerSecHandler.incrementPackagePerSecond()
+            if textHandler.isTerminationRequest(data):
+                protocolHandler.recvTerminationProtocol(conn)
             if debug: conPrint.debugRecv("received: \t" + data) #debug line
             if toleranceReached == 1:
                 exit()
@@ -107,11 +131,13 @@ class socketHandler:
 class packPerSecHandler:
     def packPerSecThread(conn):
         while 1:
-            if state == 0: break
+            if state == 0:
+                exit()
             time.sleep(1)
+
             if packagesPerSecondReceived > maxPackagesPerSecond:
                 conPrint.error("too many packages received... shutting down...")
-                os._exit(0)
+                protocolHandler.terminationProtocol(conn)
             packPerSecHandler.resetPackPerSec()
 
 
@@ -143,9 +169,11 @@ class toleranceHandler:
                 if messageReceived == 0:
                     if debug: conPrint.debug("tolerance reached...")
 
+                    conPrint.error("no message received in " + str(timeoutTolerance) +  " seconds...")
+
                     toleranceHandler.setToleranceReached(1)
 
-                    protocolHandler.toleranceProtocol(conn)
+                    protocolHandler.terminationProtocol(conn)
                 else:
                     if debug: conPrint.debug("tolerance not reached...")
                     toleranceHandler.setMessageReceived(0)
@@ -159,6 +187,14 @@ class toleranceHandler:
     def setToleranceReached(n):
         global toleranceReached
         toleranceReached = n
+
+def setLatestData(data):
+    global latestData
+    latestData = data
+
+def setState(n):
+    global state
+    state = n
 
 def serverProcess(conn):
     if debug: conPrint.debug("starting serverProcess")
@@ -185,6 +221,7 @@ messageReceived = 0
 toleranceReached = 0
 seqnr = 0
 packagesPerSecondReceived = 0
+latestData = ""
 
 serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 serv.bind(('0.0.0.0', portNumber))
@@ -199,6 +236,5 @@ else:
     conn.close()
     conPrint.error("Not correct protocol. Closing connection.")
 
-state = 0
 print('Client disconnected')
 conn.close()

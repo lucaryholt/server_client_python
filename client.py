@@ -1,9 +1,20 @@
-import socket
-import threading
-import time
-import os
-import conPrint
-import configReader
+#implement state format from server
+
+import socket, threading, time, os
+from datetime import datetime
+import conPrint, configReader
+
+class logPrinter:
+    def printToLog(text):
+        logFileName = "clientlog.txt"
+        file = open(logFileName, "a")
+        file.write(logPrinter.getDateAndTime() + ": " + text + "\n")
+        file.close()
+
+    def getDateAndTime():
+        now = datetime.now()
+        dateTimeString = now.strftime("%d/%m/%Y %H:%M:%S")
+        return dateTimeString
 
 class latestDataHandler:
     def getLatestData(conn):
@@ -21,11 +32,19 @@ class protocolHandler:
             socketHandler.sendMessage("com-0 accept")
             return True
 
-    def toleranceProtocol(conn):
-        if debug: conPrint.debug("server tolerance reached... closing connection...")
+    def terminationProtocol(conn):
+        if debug: conPrint.debug("requesting termination...")
+        socketHandler.sendMessage("con-res 0xFE")
+
+        time.sleep(2)
+
+        os._exit(0)
+
+    def recvTerminationProtocol(conn):
+        if debug: conPrint.debug("server requested termination...")
         socketHandler.sendMessage("con-res 0xFF")
 
-        print("server timeout... closing...")
+        print("closing connection...")
 
         conn.close()
         os._exit(0)
@@ -70,21 +89,27 @@ class textHandler:
     def isIP(text):
         return len(text.split(".")) == 4
 
-    def isToleranceMessage(text):
+    def isTerminationRequest(text):
         return text == "con-res 0xFE"
+
+    def isTerminationResponse(text):
+        return text == "con-res 0xFF"
 
 class socketHandler:
     def sendMessage(text):
         if debug: conPrint.debugSend("send: \t\t" + text)
+        logPrinter.printToLog("sent: " + text)
         client.send((text).encode())
 
     def receiveData(socket):
         while True:
             data = client.recv(4096).decode()
+            logPrinter.printToLog("received: " + data)
             if debug: conPrint.debugRecv("received: \t" + data) #debug line
-            if textHandler.isToleranceMessage(data):
-                protocolHandler.toleranceProtocol(socket)
-            return data
+            if textHandler.isTerminationRequest(data):
+                protocolHandler.recvTerminationProtocol(socket)
+            else:
+                return data
 
     def initiateReceive(conn):
         thread1 = threading.Thread(target = latestDataHandler.getLatestData, args = (conn,))
@@ -114,6 +139,7 @@ def clientProcess(conn):
         else:
             exit()
         message = input()
+    protocolHandler.terminationProtocol(conn)
     if debug: conPrint.debug("stopping clientProcess...")
 
 #Code starts here
@@ -127,8 +153,6 @@ ipAddress = configReader.readString(fileName, "IPAddress")
 seqnr = -1
 latestData = ""
 
-config.readConfig()
-
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect((ipAddress, portNumber))
 
@@ -137,4 +161,4 @@ if protocolHandler.connectionProtocol(client):
     clientProcess(client)
 
 client.close()
-exit()
+exit() #probably redundant, as the code exits after this line anyway
