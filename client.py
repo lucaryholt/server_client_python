@@ -1,20 +1,6 @@
-#implement state format from server
-
 import socket, threading, time, os
 from datetime import datetime
 import conPrint, configReader
-
-class logPrinter:
-    def printToLog(text):
-        logFileName = "clientlog.txt"
-        file = open(logFileName, "a")
-        file.write(logPrinter.getDateAndTime() + ": " + text + "\n")
-        file.close()
-
-    def getDateAndTime():
-        now = datetime.now()
-        dateTimeString = now.strftime("%d/%m/%Y %H:%M:%S")
-        return dateTimeString
 
 class latestDataHandler:
     def getLatestData(conn):
@@ -27,10 +13,16 @@ class latestDataHandler:
 
 class protocolHandler:
     def connectionProtocol(conn):
-        socketHandler.sendMessage("com-0 " + socketHandler.get_ip())
+        if handshakeSkip:
+            socketHandler.sendMessage("com-0 accept")
+        else:
+            socketHandler.sendMessage("com-0 " + socketHandler.get_ip())
         if textHandler.correctAcceptProtocol(socketHandler.receiveData(conn)):
             socketHandler.sendMessage("com-0 accept")
             return True
+        else:
+            conPrint.error("server refused connection...")
+            os._exit(0)
 
     def terminationProtocol(conn):
         if debug: conPrint.debug("requesting termination...")
@@ -97,19 +89,18 @@ class textHandler:
 
 class socketHandler:
     def sendMessage(text):
-        if debug: conPrint.debugSend("send: \t\t" + text)
-        logPrinter.printToLog("sent: " + text)
+        if debug: conPrint.debugSend("sent: \t\t" + text)
         client.send((text).encode())
 
     def receiveData(socket):
         while True:
             data = client.recv(4096).decode()
-            logPrinter.printToLog("received: " + data)
-            if debug: conPrint.debugRecv("received: \t" + data) #debug line
-            if textHandler.isTerminationRequest(data):
-                protocolHandler.recvTerminationProtocol(socket)
-            else:
-                return data
+            if data != "":
+                if debug: conPrint.debugRecv("received: \t" + data) #debug line
+                if textHandler.isTerminationRequest(data):
+                    protocolHandler.recvTerminationProtocol(socket)
+                else:
+                    return data
 
     def initiateReceive(conn):
         thread1 = threading.Thread(target = latestDataHandler.getLatestData, args = (conn,))
@@ -149,6 +140,7 @@ keepAlive = configReader.readBoolean(fileName, "KeepAlive")
 keepAliveTime = configReader.readFloat(fileName, "KeepAliveTime")
 portNumber = configReader.readInt(fileName, "PortNumber")
 ipAddress = configReader.readString(fileName, "IPAddress")
+handshakeSkip = configReader.readBoolean(fileName, "HandshakeSkip")
 
 seqnr = -1
 latestData = ""

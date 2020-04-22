@@ -1,22 +1,12 @@
-#Maybe look into constructor and method to read all from file, instead of
-#reading file for each value
-#https://www.geeksforgeeks.org/constructors-in-python/
-#^also for socket connection class
-
-#log fil, med korrekte handskakes
-#hvis klienten prøver at skippe første step i handshaket, hvordan skal serveren svare? skal det logges?
-# - prøv at hakke dig selv, prøv at bypass protocol regler
-#tilføj dato og tidspunkt i loggen, så man kan se hvornår handskakes er lavet
-
 import socket, sys, time, threading, os
 from datetime import datetime
 import conPrint, configReader
 
 class logPrinter:
-    def printToLog(text):
-        logFileName = "serverlog.txt"
+    def printToLog(type, text):
+        #logFileName = "serverlog.txt"
         file = open(logFileName, "a")
-        file.write(logPrinter.getDateAndTime() + ": " + text + "\n")
+        file.write(logPrinter.getType(type) + logPrinter.getDateAndTime() + ": " + text + "\n")
         file.close()
 
     def getDateAndTime():
@@ -24,17 +14,27 @@ class logPrinter:
         dateTimeString = now.strftime("%d/%m/%Y %H:%M:%S")
         return dateTimeString
 
+    def getType(type):
+        if type == "info":
+            return "INFO: "
+        elif type == "error":
+            return "ERROR: "
+
 class protocolHandler:
     def connectProtocol(conn):
         data = socketHandler.receiveData(conn)
         if textHandler.correctProtocol(data, "com-0") and textHandler.isIP(data):
+            logPrinter.printToLog("info", data)
             socketHandler.sendMessage(("com-0 accept " + socketHandler.get_ip()), conn)
             data = socketHandler.receiveData(conn)
             if textHandler.correctProtocol(data, "com-0"):
+                logPrinter.printToLog("info", data)
                 return True
             else:
+                logPrinter.printToLog("error", (data + " {FAILED SECOND HANDSHAKE}"))
                 return False
         else:
+            logPrinter.printToLog("error", (data + " {FAILED FIRST HANDSHAKE}"))
             return
 
     def terminationProtocol(conn):
@@ -100,13 +100,11 @@ class textHandler:
 class socketHandler:
     def sendMessage(text, conn):
         if debug: conPrint.debugSend("send: \t\t" + text)
-        logPrinter.printToLog("sent: " + text)
         conn.send((text).encode())
 
     def receiveData(conn):
         while True:
             data = conn.recv(4096).decode()
-            logPrinter.printToLog("received: " + data)
             setLatestData(data)
             packPerSecHandler.incrementPackagePerSecond()
             if textHandler.isTerminationRequest(data):
@@ -211,6 +209,7 @@ def serverProcess(conn):
 
 #The code starts here
 fileName = "server-opt.conf"
+logFileName = configReader.readString(fileName, "LogFileName")
 debug = configReader.readBoolean(fileName, "Debug")
 timeoutTolerance = configReader.readInt(fileName, "TimeoutTolerance")
 maxPackagesPerSecond = configReader.readInt(fileName, "MaxPackagesPerSecond")

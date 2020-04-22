@@ -1,19 +1,9 @@
 Log:
-14/04/2020 23:44:57: received: com-0 192.168.8.103
-14/04/2020 23:44:57: sent: com-0 accept 192.168.8.103
-14/04/2020 23:44:57: received: 
-14/04/2020 23:45:48: received: com-0 192.168.8.103
-14/04/2020 23:45:48: sent: com-0 accept 192.168.8.103
-14/04/2020 23:45:48: received: com-0 accept
-14/04/2020 23:45:49: received: msg-0=hey
-14/04/2020 23:45:49: sent: res-1=I am server
-14/04/2020 23:45:50: received: msg-2=hey
-14/04/2020 23:45:50: sent: res-3=I am server
-14/04/2020 23:45:51: received: con-h 0x00
-14/04/2020 23:45:51: received: msg-4=kjædkas
-14/04/2020 23:45:51: sent: res-5=I am server
-14/04/2020 23:45:52: received: msg-6=kdælsk
-14/04/2020 23:45:52: sent: res-7=I am server
-14/04/2020 23:45:54: received: con-h 0x00
-14/04/2020 23:45:55: received: con-res 0xFE
-14/04/2020 23:45:55: sent: con-res 0xFF
+INFO: 22/04/2020 14:03:49: com-0 192.168.8.103
+INFO: 22/04/2020 14:03:49: com-0 accept
+ERROR: 22/04/2020 14:04:52: com-0 accept {FAILED FIRST HANDSHAKE}
+INFO: 22/04/2020 14:08:06: com-0 192.168.8.103
+INFO: 22/04/2020 14:08:06: com-0 accept
+ERROR: 22/04/2020 14:08:31: com-0 accept {FAILED FIRST HANDSHAKE}
+INFO: 22/04/2020 14:10:19: com-0 192.168.8.103
+INFO: 22/04/2020 14:10:19: com-0 accept
