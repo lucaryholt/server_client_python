@@ -204,6 +204,8 @@ def serverProcess(conn):
             print(textHandler.readMessage(data))
             textHandler.sendServerMessage(conn)
             seqNrHandler.increaseSeqnr()
+        else:
+            logPrinter.printToLog("error", (data + " {NOT CORRECT SEQ NR}"))
     if debug: conPrint.debug("stopping serverProcess")
 
 
