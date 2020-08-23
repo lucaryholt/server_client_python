@@ -95,6 +95,7 @@ class socketHandler:
     def receiveData(socket):
         while True:
             data = client.recv(4096).decode()
+            print(data)
             if data != "":
                 if debug: conPrint.debugRecv("received: \t" + data) #debug line
                 if textHandler.isTerminationRequest(data):
@@ -142,7 +143,7 @@ portNumber = configReader.readInt(fileName, "PortNumber")
 ipAddress = configReader.readString(fileName, "IPAddress")
 handshakeSkip = configReader.readBoolean(fileName, "HandshakeSkip")
 
-seqnr = -1
+seqnr = 20
 latestData = ""
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
